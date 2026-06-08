@@ -38,7 +38,6 @@ jobs:
       run: |
         mkdir build-output
         xcopy /E /I paint\build\x64\Release build-output
-        # Ensure dependencies/assets required by the build folder are bundled
 
     - name: Upload Binary
       uses: actions/upload-artifact@v4
