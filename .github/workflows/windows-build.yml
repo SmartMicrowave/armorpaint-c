@@ -27,26 +27,43 @@ jobs:
       run: ..\base\make
 
     - name: Build Solution
-      working-directory: paint\build
-      shell: pwsh
-      run: |
-        $sln = Get-ChildItem *.sln | Select-Object -First 1
-        if (-not $sln) {
-          Write-Error "Could not find any .sln file in the build directory."
-          exit 1
-        }
-        Write-Host "Building solution: $($sln.Name)"
-        msbuild $sln.Name /p:Configuration=Release /p:Platform=x64
-
-    - name: Package Artifacts
-      working-directory: paint\build
+      working-directory: paint
       shell: cmd
       run: |
-        mkdir build-output
-        xcopy /E /I x64\Release build-output
+        echo Locating solution file...
+        for /r %%i in (*.sln) do (
+          echo Found: %%i
+          msbuild "%%i" /p:Configuration=Release /p:Platform=x64
+          if errorlevel 1 exit /b 1
+          goto :build_done
+        )
+        echo ERROR: No .sln file found. Printing directory structure for debugging:
+        tree /F
+        exit /b 1
+        :build_done
+
+    - name: Package Artifacts
+      working-directory: paint
+      shell: pwsh
+      run: |
+        $exe = Get-ChildItem -Path . -Filter "*.exe" -Recurse | Where-Object { $_.FullName -match "Release" -and ($_.Name -match "ArmorPaint" -or $_.Name -match "Krom") } | Select-Object -First 1
+        
+        if ($exe) {
+            $outDir = "..\build-output"
+            New-Item -ItemType Directory -Force -Path $outDir
+            Copy-Item -Path "$($exe.Directory.FullName)\*" -Destination $outDir -Recurse -Force
+            
+            $dataDir = Get-ChildItem -Path . -Directory -Filter "krom" -Recurse | Select-Object -First 1
+            if ($dataDir) {
+               Copy-Item -Path "$($dataDir.FullName)\*" -Destination $outDir -Recurse -Force
+            }
+        } else {
+            Write-Error "Could not find compiled Release executable."
+            exit 1
+        }
 
     - name: Upload Binary
       uses: actions/upload-artifact@v4
       with:
         name: ArmorPaint-Windows-x64
-        path: paint/build/build-output/
+        path: build-output/
