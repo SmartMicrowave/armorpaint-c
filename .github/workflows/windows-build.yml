@@ -1,0 +1,47 @@
+name: Build Windows Binary
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-size: 20
+
+    - name: Generate Visual Studio Project
+      shell: cmd
+      run: |
+        cd paint
+        ..\base\make
+
+    - name: Build Solution
+      shell: cmd
+      run: |
+        cd paint\build
+        msbuild ArmorPaint.sln /p:Configuration=Release /p:Platform=x64
+
+    - name: Package Artifacts
+      shell: cmd
+      run: |
+        mkdir build-output
+        xcopy /E /I paint\build\x64\Release build-output
+        # Ensure dependencies/assets required by the build folder are bundled
+
+    - name: Upload Binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: ArmorPaint-Windows-x64
+        path: build-output/
