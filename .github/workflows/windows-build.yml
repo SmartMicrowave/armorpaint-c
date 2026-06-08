@@ -22,25 +22,31 @@ jobs:
         node-version: 24
 
     - name: Generate Visual Studio Project
+      working-directory: paint
       shell: cmd
-      run: |
-        cd paint
-        ..\base\make
+      run: ..\base\make
 
     - name: Build Solution
-      shell: cmd
+      working-directory: paint\build
+      shell: pwsh
       run: |
-        cd paint\build
-        msbuild ArmorPaint.sln /p:Configuration=Release /p:Platform=x64
+        $sln = Get-ChildItem *.sln | Select-Object -First 1
+        if (-not $sln) {
+          Write-Error "Could not find any .sln file in the build directory."
+          exit 1
+        }
+        Write-Host "Building solution: $($sln.Name)"
+        msbuild $sln.Name /p:Configuration=Release /p:Platform=x64
 
     - name: Package Artifacts
+      working-directory: paint\build
       shell: cmd
       run: |
         mkdir build-output
-        xcopy /E /I paint\build\x64\Release build-output
+        xcopy /E /I x64\Release build-output
 
     - name: Upload Binary
       uses: actions/upload-artifact@v4
       with:
         name: ArmorPaint-Windows-x64
-        path: build-output/
+        path: paint/build/build-output/
