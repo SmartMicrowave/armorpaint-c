@@ -29,7 +29,8 @@ jobs:
     - name: Build Solution
       working-directory: paint\build
       shell: cmd
-      run: msbuild ArmorPaint.vcxproj /p:Configuration=Release /p:Platform=x64
+      # The PlatformToolset flag forces MSBuild to use ClangCL instead of MSVC
+      run: msbuild ArmorPaint.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=ClangCL
 
     - name: Package Artifacts
       working-directory: paint
@@ -38,16 +39,23 @@ jobs:
         $outDir = "..\build-output"
         New-Item -ItemType Directory -Force -Path $outDir
         
-        $exe = Get-ChildItem -Path . -Filter "*.exe" -Recurse | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
+        # Grab the EXE and any generated DLLs in the Release directory
+        $exe = Get-ChildItem -Path build -Filter "*.exe" -Recurse | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
         if ($exe) {
-            Copy-Item -Path $exe.FullName -Destination $outDir -Force
+            Copy-Item -Path "$($exe.Directory.FullName)\*" -Destination $outDir -Force
         } else {
             Write-Error "Could not find compiled .exe file."
             exit 1
         }
         
+        # Package the data folder
         if (Test-Path "build\out\data") {
-            Copy-Item -Path "build\out\data" -Destination "$outDir\data" -Recurse -Force
+            $targetDataDir = Join-Path $outDir "data"
+            New-Item -ItemType Directory -Force -Path $targetDataDir
+            Copy-Item -Path "build\out\data\*" -Destination $targetDataDir -Recurse -Force
+        } else {
+            Write-Error "Could not find asset data folder."
+            exit 1
         }
 
     - name: Upload Binary
