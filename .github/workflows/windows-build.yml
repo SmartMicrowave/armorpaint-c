@@ -24,7 +24,7 @@ jobs:
     - name: Generate Visual Studio Project
       working-directory: paint
       shell: cmd
-      run: ..\base\make --graphics vulkan
+      run: ..\base\make
 
     - name: Build Solution
       working-directory: paint\build
