@@ -24,7 +24,7 @@ jobs:
     - name: Generate Visual Studio Project
       working-directory: paint
       shell: cmd
-      run: ..\base\make
+      run: ..\base\make --graphics direct3d11
 
     - name: Build Solution
       working-directory: paint\build
